@@ -1,15 +1,15 @@
-# Agentic Workflow for DeepLenseSim — Pydantic AI
+# Agentic Workflow for DeepLenseSim - Pydantic AI
 
 An agentic workflow using **Pydantic AI** that wraps the [DeepLenseSim](https://github.com/mwt5345/DeepLenseSim) simulation pipeline to generate strong gravitational lensing images through **natural language interaction**.
 
 ## Features
 
-- **Natural language interface** — describe simulations in plain English
-- **Human-in-the-loop** — agent asks follow-up questions before generating
-- **Structured output** — typed Pydantic models for all parameters and results
-- **Two model configurations** — Model_I (150×150 Gaussian PSF) and Model_II (64×64 Euclid)
-- **Three dark matter classes** — no substructure, axion (vortex), CDM (point-mass)
-- **Validated parameters** — physics constraints enforced via Pydantic validators
+- **Natural language interface** - describe simulations in plain English
+- **Human-in-the-loop** - agent asks follow-up questions before generating
+- **Structured output** - typed Pydantic models for all parameters and results
+- **Two model configurations** - Model_I (150×150 Gaussian PSF) and Model_II (64×64 Euclid)
+- **Three dark matter classes** - no substructure, axion (vortex), CDM (point-mass)
+- **Validated parameters** - physics constraints enforced via Pydantic validators
 
 ## Architecture
 
@@ -71,7 +71,7 @@ pip install -r requirements.txt
 
 The agent auto-detects your provider based on environment variables. **No paid API key required!**
 
-#### Option A: Google Gemini (Free — recommended)
+#### Option A: Google Gemini (Free - recommended)
 
 1. Get a free API key at [ai.google.dev](https://ai.google.dev/)
 2. Set the environment variable:
@@ -80,7 +80,7 @@ The agent auto-detects your provider based on environment variables. **No paid A
 export GEMINI_API_KEY="your-gemini-key"
 ```
 
-#### Option B: Ollama (100% local — no API key needed)
+#### Option B: Ollama (100% local - no API key needed)
 
 1. Install Ollama from [ollama.com](https://ollama.com/)
 2. Pull a model:
@@ -111,17 +111,33 @@ export LENSING_AGENT_MODEL="openai:gpt-4o-mini"
 
 ### Interactive Agent
 
+To start the interactive chat session, run the agent module from the root directory:
+
 ```bash
 python -m src.agent
 ```
 
-This launches an interactive session where you can type natural language requests:
+#### Selecting a Specific Model
+By default, the agent will attempt to detect the best available model based on your environment variables (`GEMINI_API_KEY`, etc.). However, you can force the agent to use a specific model by setting the `LENSING_AGENT_MODEL` environment variable.
 
+For Google Gemini (requires `GEMINI_API_KEY`):
+```bash
+LENSING_AGENT_MODEL="google-gla:gemini-2.0-flash" python -m src.agent
 ```
+
+For a local Ollama model (no API key required, must have run `ollama pull <model>` first):
+```bash
+LENSING_AGENT_MODEL="ollama:qwen2.5-coder:7b" python -m src.agent
+```
+
+#### What to Expect
+This launches an interactive terminal session where you can type natural language requests. The agent will parse your request, ask clarifying questions if parameters are missing, and generate images:
+
+```text
 You: Generate 5 CDM lensing images using Model_I
 Assistant: I'd like to confirm your simulation parameters...
 You: Yes, use defaults for everything
-Assistant: **Simulation Completed** — 5 images generated...
+Assistant: **Simulation Completed** - 5 images generated...
 ```
 
 ### Demo Conversation
@@ -154,16 +170,16 @@ pytest tests/ -v
 
 ### Dark Matter Substructure Types
 
-- **no_sub** — Smooth lens, no dark matter substructure
-- **axion** — Axion vortex substructure (mass range: 10⁻²⁴–10⁻²² eV)
-- **cdm** — Cold dark matter with point-mass subhalos
+- **no_sub** - Smooth lens, no dark matter substructure
+- **axion** - Axion vortex substructure (mass range: 10⁻²⁴–10⁻²² eV)
+- **cdm** - Cold dark matter with point-mass subhalos
 
 ## Human-in-the-Loop Flow
 
 The agent follows a strict two-phase interaction:
 
-1. **Phase 1 — Elicitation**: Parse user prompt, identify missing params, ask targeted questions
-2. **Phase 2 — Confirmation**: Present resolved parameters, ask for approval before generating
+1. **Phase 1 - Elicitation**: Parse user prompt, identify missing params, ask targeted questions
+2. **Phase 2 - Confirmation**: Present resolved parameters, ask for approval before generating
 
 ## License
 
