@@ -174,12 +174,32 @@ pytest tests/ -v
 - **axion** - Axion vortex substructure (mass range: 10⁻²⁴–10⁻²² eV)
 - **cdm** - Cold dark matter with point-mass subhalos
 
-## Human-in-the-Loop Flow
+## Input Verification and Human-in-the-Loop Flow
 
-The agent follows a strict two-phase interaction:
+The agent translates natural language simulation requests into verified, physically accurate parameter sets, employing a strict multi-phase interaction to keep the human in control:
 
-1. **Phase 1 - Elicitation**: Parse user prompt, identify missing params, ask targeted questions
-2. **Phase 2 - Confirmation**: Present resolved parameters, ask for approval before generating
+1. **Phase 1 - Natural Language Parsing**: The Pydantic AI agent parses the user's NLP prompt to extract requested simulation parameters (masses, redshifts, model configurations, and dark matter substructures).
+2. **Phase 2 - Physics Checking & Validation**: The parameters are passed through strict Pydantic model validators. The agent uses the `validate_parameters` tool as a "pre-flight check", evaluating constraints such as ensuring the source redshift (`z_source`) is strictly greater than the halo redshift (`z_halo`), and flagging physically unrealistic mass values. 
+3. **Phase 3 - Elicitation**: If any required parameters are missing or anomalous, the agent asks targeted follow-up questions to request clarification or corrections from the user.
+4. **Phase 4 - Confirmation**: Before any computationally expensive image generation begins, the agent explicitly presents the fully resolved and validated parameter set, requesting user approval.
+
+## Agent Tools
+
+To achieve this workflow, our agentic system is equipped with three highly specialized tools that enable dynamic introspection, validation, and execution:
+
+### 1. Model Info Tool (`get_model_info`)
+This tool acts as the agent's internal knowledge base about DeepLenseSim. When a user asks about the differences between models or needs help choosing one, the agent queries this tool to retrieve real-time specs on resolutions, pixel scales, instruments, and PSF types (e.g., Gaussian vs. Euclid SimAPI) for `Model_I` and `Model_II`.
+
+### 2. Validation Pre-flight Tool (`validate_parameters`)
+Before executing simulations, the agent tests the current parameter state through this tool. It checks for:
+- Invalid model or substructure types.
+- Physics violations (e.g., source galaxy placed in front of the lens).
+- Edge-case warnings, like extremely low/high dark matter halo masses (cluster-scales vs. galaxy-scales) or out-of-range Axion masses.
+
+The tool outputs a structured report with strict errors and warnings that the agent then relays to the user to fix.
+
+### 3. Simulation Execution Tool (`generate_lensing_images`)
+Invoked only upon explicit user confirmation, this tool acts as the bridge to DeepLenseSim's engine. It accepts strongly-typed inputs (e.g., halo mass, substructure type, redshift data), directs DeepLenseSim to spawn batch image generation, and returns a comprehensive status string with metadata and generated image paths.
 
 ## License
 
