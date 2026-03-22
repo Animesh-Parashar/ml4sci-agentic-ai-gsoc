@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: deeplense-simulator
+    runtime: python
+    buildCommand: "chmod +x build.sh && ./build.sh"
+    startCommand: "streamlit run app.py --server.port $PORT --server.address 0.0.0.0 --server.headless true"
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: LENSING_AGENT_MODEL
+        value: google-gla:gemini-flash-latest
