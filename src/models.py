@@ -18,8 +18,9 @@ class SubstructureType(str, Enum):
 
 class ModelConfig(str, Enum):
     """Model configurations corresponding to DeepLenseSim Model folders."""
-    MODEL_I = "Model_I"    # 150x150, Gaussian PSF, simple_sim()
-    MODEL_II = "Model_II"  # 64x64, Euclid SimAPI, simple_sim_2()
+    MODEL_I   = "Model_I"    # 150x150, Gaussian PSF, simple_sim()
+    MODEL_II  = "Model_II"  # 64x64, Euclid VIS,    simple_sim_2()
+    MODEL_III = "Model_III" # 64x64, HST ACS/WFC F814W, simple_sim_2(), mag-based source, make_old_cdm()
 
 
 # Input: Simulation Parameters
@@ -34,7 +35,8 @@ class SimulationParameters(BaseModel):
     model_config_type: ModelConfig = Field(
         description="Which DeepLenseSim Model configuration to use. "
                     "Model_I = 150x150 px, Gaussian PSF. "
-                    "Model_II = 64x64 px, Euclid instrument."
+                    "Model_II = 64x64 px, Euclid VIS instrument. "
+                    "Model_III = 64x64 px, HST ACS/WFC F814W, magnitude-based source, older CDM sampler (make_old_cdm)."
     )
     substructure_type: SubstructureType = Field(
         description="Type of dark matter substructure: "

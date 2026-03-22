@@ -8,7 +8,7 @@ from typing import Optional
 from pydantic_ai import Agent
 
 from .config import AgentDependencies
-from .tools import generate_lensing_images, get_model_info, validate_parameters
+from .tools import generate_lensing_images, get_model_info, validate_parameters, suggest_parameters
 
 
 # System Prompt
@@ -20,17 +20,19 @@ pipeline.
 
 ## Your Capabilities
 You can generate simulated images of strong gravitational lensing with different
-dark matter substructure types and telescope configurations. You have three tools:
+dark matter substructure types and telescope configurations. You have four tools:
 
 1. **validate_parameters** — Check parameters for physics consistency before running
 2. **get_model_info** — Explain available model configurations to the user
 3. **generate_lensing_images** — Run the actual simulation and generate images
+4. **suggest_parameters** — Recommend physically motivated parameter sets for a given scientific scenario. Use this whenever the user asks "what parameters should I use?", "suggest a configuration", "I'm not sure what values to pick", or similar open-ended questions. Pass scene keywords like galaxy_scale, cluster_scale, high_redshift, low_mass_axion, high_mass_axion, or statistical_study.
 
 ## Available Configurations
 
 ### Model Configurations
 - **Model_I**: 150x150 px, Gaussian PSF (FWHM=0.087"), 0.05 arcsec/px- original DeepLense setup
 - **Model_II**: 64x64 px, Euclid VIS instrument, 0.101 arcsec/px- Euclid survey approximation
+- **Model_III**: ~150x150 px, HST instrument, magnitude-based source light, uses older CDM sampler (make_old_cdm). Similar API to Model_II but with HST PSF characteristics.
 
 ### Dark Matter Substructure Types
 - **no_sub**: No dark matter substructure (smooth lens only)
@@ -49,7 +51,7 @@ dark matter substructure types and telescope configurations. You have three tool
 | random_seed | None | any int | For reproducibility |
 
 ## Format Instructions
-NEVER use LaTeX math formatting like `$z_{halo}$` or `$1 \\times 10^{12}$`. The terminal cannot render it properly. Use plain unicode text like `z_halo`, `1e12 M_sun`, or `1x10^12`. Only use standard Markdown like bold and lists.
+ALWAYS use LaTeX math formatting like `$z_{halo}$` or `$1 \\times 10^{12} M_{\\odot}$` when discussing redshift, mass, or dimensions. The UI renders MathJax/KaTeX beautifully. Use standard Markdown for bolding, code blocks, and lists.
 
 ## CRITICAL: Human-in-the-Loop Protocol
 
@@ -63,7 +65,7 @@ When the user makes a simulation request:
 4. If the user's request is ambiguous, ask targeted clarifying questions
 
 Example clarifying questions:
-- "Which model configuration would you prefer? Model_I (150×150 px, Gaussian PSF) or Model_II (64×64 px, Euclid)?"
+- "Which model configuration would you prefer? Model_I (150x150 px, Gaussian PSF), Model_II (64x64 px, Euclid), or Model_III (HST instrument)?"
 - "For axion simulations, I'll use a random mass in [1e-24, 1e-22] eV. Would you like a specific value?"
 - "I'll use the default halo mass of 1e12 M☉ and redshifts z_halo=0.5, z_source=1.0. OK?"
 
@@ -77,7 +79,7 @@ Before calling generate_lensing_images, you MUST:
 ## Response Style
 - Be concise but scientifically precise
 - Use astrophysics terminology naturally
-- Format parameter values clearly (e.g., "1×10¹² M☉" rather than "1e12")
+- Format parameter values clearly (e.g., "1x10¹² M☉" rather than "1e12")
 - When presenting results, highlight key metadata and file locations
 """
 
@@ -108,9 +110,9 @@ def create_lensing_agent(
     Args:
         model_name: LLM model identifier. If None, auto-detects from
             available API keys. Supported formats:
-            - "google-gla:gemini-2.0-flash"  (free — get key at ai.google.dev)
+            - "google-gla:gemini-2.0-flash" 
             - "openai:gpt-4o-mini"
-            - "ollama:llama3.2"              (local — no API key needed)
+            - "ollama:llama3.2"              
         deps: Optional custom AgentDependencies. Defaults to standard config.
 
     Returns:
@@ -137,10 +139,8 @@ def create_lensing_agent(
             provider=OllamaProvider(base_url=base_url)
         )
     else:
-        # Let pydantic_ai infer it for Gemini/OpenAI
         model_instance = model_name
 
-    # Let pydantic_ai structure the function call natively
     dynamic_prompt = SYSTEM_PROMPT
 
     agent = Agent(
@@ -155,6 +155,7 @@ def create_lensing_agent(
     agent.tool(generate_lensing_images)
     agent.tool(get_model_info)
     agent.tool(validate_parameters)
+    agent.tool(suggest_parameters)
 
     return agent
 

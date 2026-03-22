@@ -14,6 +14,9 @@ from .config import (
     MODEL_II_RESOLUTION,
     MODEL_II_PIXEL_SCALE,
     MODEL_II_INSTRUMENT,
+    MODEL_III_RESOLUTION,
+    MODEL_III_PIXEL_SCALE,
+    MODEL_III_INSTRUMENT,
     MAX_IMAGES_PER_REQUEST,
 )
 from .models import (
@@ -46,8 +49,10 @@ async def generate_lensing_images(
 
     Args:
         ctx: Runtime context with agent dependencies.
-        model_config_type: Model configuration — "Model_I" (150x150 px, Gaussian PSF)
-            or "Model_II" (64x64 px, Euclid instrument).
+        model_config_type: Model configuration:
+            "Model_I"   (150x150 px, Gaussian PSF),
+            "Model_II"  (64x64 px, Euclid VIS), or
+            "Model_III" (HST instrument, magnitude-based source, old CDM sampler).
         substructure_type: Dark matter substructure — "no_sub", "axion", or "cdm".
         num_images: Number of images to generate (1-100).
         halo_mass: Main halo mass in solar masses (default: 1e12).
@@ -144,11 +149,11 @@ async def get_model_info(
                 "Closest to the original DeepLense papers. "
                 "Uses a simple Gaussian PSF with manual noise generation."
             ),
-            "resolution": f"{MODEL_I_RESOLUTION[0]}×{MODEL_I_RESOLUTION[1]} px",
+            "resolution": f"{MODEL_I_RESOLUTION[0]}x{MODEL_I_RESOLUTION[1]} px",
             "pixel_scale": f"{MODEL_I_PIXEL_SCALE} arcsec/px",
             "instrument": MODEL_I_INSTRUMENT,
             "source_galaxy": "Sersic ellipse (amplitude-based)",
-            "simulation_method": "simple_sim() — manual ImageModel + Poisson/background noise",
+            "simulation_method": "simple_sim() -- manual ImageModel + Poisson/background noise",
             "dm_classes": "no_sub, axion (vortex), CDM (point-mass subhalos)",
         },
         "Model_II": {
@@ -156,12 +161,25 @@ async def get_model_info(
                 "Approximates a Euclid survey. Uses lenstronomy's SimAPI "
                 "with pre-defined Euclid observation characteristics."
             ),
-            "resolution": f"{MODEL_II_RESOLUTION[0]}×{MODEL_II_RESOLUTION[1]} px",
+            "resolution": f"{MODEL_II_RESOLUTION[0]}x{MODEL_II_RESOLUTION[1]} px",
             "pixel_scale": f"{MODEL_II_PIXEL_SCALE} arcsec/px",
             "instrument": MODEL_II_INSTRUMENT,
             "source_galaxy": "Sersic ellipse (magnitude-based)",
-            "simulation_method": "simple_sim_2() — SimAPI with Euclid band config",
+            "simulation_method": "simple_sim_2() -- SimAPI with Euclid band config",
             "dm_classes": "no_sub, axion (vortex), CDM (point-mass subhalos)",
+        },
+        "Model_III": {
+            "description": (
+                "Same 150x150 Gaussian PSF setup as Model_I, but uses magnitude-based source light "
+                "(like Model_II) and the older CDM subhalo sampler (make_old_cdm) instead of the "
+                "pyHalo-based CDM sampler. The HST instrument path is not yet implemented in DeepLenseSim."
+            ),
+            "resolution": f"{MODEL_III_RESOLUTION[0]}x{MODEL_III_RESOLUTION[1]} px",
+            "pixel_scale": f"{MODEL_III_PIXEL_SCALE} arcsec/px",
+            "instrument": MODEL_III_INSTRUMENT,
+            "source_galaxy": "Sersic ellipse (magnitude-based)",
+            "simulation_method": "simple_sim() -- Gaussian PSF, magnitude-based source, old CDM sampler",
+            "dm_classes": "no_sub, axion (vortex), CDM (old point-mass subhalos via make_old_cdm)",
         },
     }
 
@@ -202,7 +220,7 @@ async def validate_parameters(
 
     Args:
         ctx: Runtime context.
-        model_config_type: "Model_I" or "Model_II".
+        model_config_type: "Model_I", "Model_II", or "Model_III".
         substructure_type: "no_sub", "axion", or "cdm".
         num_images: Number of images (1-100).
         halo_mass: Halo mass in solar masses.
@@ -297,5 +315,220 @@ async def validate_parameters(
         lines.append("✅ Parameters pass validation. You may proceed with generation.")
     else:
         lines.append("❌ Please fix the errors above before generating.")
+
+    return "\n".join(lines)
+
+
+# Tool 4: Suggest parameters
+
+
+# Scenario registry: each entry has suggested values and per-field justifications.
+_SCENARIO_REGISTRY: dict[str, dict] = {
+    "galaxy_scale": {
+        "label": "Galaxy-Scale Lens",
+        "description": (
+            "Typical galaxy-scale strong gravitational lens. Reproduces the "
+            "original DeepLense training distribution most closely. Best "
+            "starting point for most experiments."
+        ),
+        "substructure_note": "Works with all three substructure types.",
+        "suggestions": {
+            "model_config_type": ("Model_I", "150x150 px matches original DeepLense angular resolution and PSF"),
+            "halo_mass":         ("1e12 M_sun", "Milky Way-scale halo, peak strong-lensing cross-section"),
+            "z_halo":            ("0.5", "Canonical lens redshift for ground-based optical surveys"),
+            "z_source":          ("1.5", "Bright Lyman-break galaxy / LRG source population peak"),
+            "num_images":        ("5", "Good starting point for visual inspection"),
+            "random_seed":       ("None", "Leave unset for varied independent realizations"),
+        },
+    },
+    "cluster_scale": {
+        "label": "Galaxy-Cluster-Scale Lens",
+        "description": (
+            "Galaxy cluster acting as the primary lens. Produces dramatic "
+            "arcs and multiple images. Halo masses are 2-3 orders of "
+            "magnitude above galaxy-scale lenses."
+        ),
+        "substructure_note": (
+            "CDM subhalos are most physically motivated at cluster scales. "
+            "Axion substructure at this mass scale requires very light axion masses."
+        ),
+        "suggestions": {
+            "model_config_type": ("Model_I", "Higher angular extent of cluster arcs benefits from 150x150 px"),
+            "halo_mass":         ("5e14 M_sun", "Massive cluster scale; strong lensing requires M > 1e14 M_sun"),
+            "z_halo":            ("0.3", "Low-redshift clusters dominate flux-limited cluster samples"),
+            "z_source":          ("2.0", "High-redshift background galaxy behind nearby cluster"),
+            "num_images":        ("3", "Cluster sims are slower; start with a small batch"),
+            "random_seed":       ("42", "Set a seed to reproduce the specific cluster realization"),
+        },
+    },
+    "high_redshift": {
+        "label": "High-Redshift Source",
+        "description": (
+            "Source galaxy at high redshift (z > 2) behind a moderate-redshift "
+            "lens. Probes earlier cosmic epochs and produces stronger lensing "
+            "magnification due to the long source-lens angular diameter distance."
+        ),
+        "substructure_note": "All substructure types are valid.",
+        "suggestions": {
+            "model_config_type": ("Model_II", "Euclid instrument is designed for high-z survey science"),
+            "halo_mass":         ("2e12 M_sun", "Slightly above MW-mass to ensure strong lensing at this geometry"),
+            "z_halo":            ("0.7", "Intermediate lens redshift maximises lensing efficiency for z_source ~ 3"),
+            "z_source":          ("3.0", "Lyman-break galaxy population at cosmic noon"),
+            "num_images":        ("5", "Balanced starting batch"),
+            "random_seed":       ("None", "Unset for varied source morphologies"),
+        },
+    },
+    "low_mass_axion": {
+        "label": "Ultra-Light Axion (Fuzzy DM)",
+        "description": (
+            "Ultra-light fuzzy dark matter axion with a very low particle mass. "
+            "The de Broglie wavelength is large (~kpc), producing extended, "
+            "coherent vortex structures clearly distinguishable from CDM subhalos."
+        ),
+        "substructure_note": "Requires substructure_type = axion.",
+        "suggestions": {
+            "model_config_type": ("Model_I", "Higher resolution better resolves extended vortex structures"),
+            "halo_mass":         ("1e12 M_sun", "Galaxy-scale halo"),
+            "z_halo":            ("0.5", "Standard lens redshift"),
+            "z_source":          ("1.5", "Standard source redshift"),
+            "axion_mass":        ("1e-24 eV", "Lower end of fuzzy DM window; largest vortex cores (~kpc)"),
+            "vortex_mass":       ("3e10 M_sun", "Default total vortex mass"),
+            "num_images":        ("10", "Generate several to sample vortex pattern variety"),
+            "random_seed":       ("None", "Unset for varied vortex configurations"),
+        },
+    },
+    "high_mass_axion": {
+        "label": "Heavy Axion (Near-CDM Regime)",
+        "description": (
+            "Heavier axion particle mass. The de Broglie wavelength is short "
+            "(sub-pc), so vortex cores are compact and the convergence map begins "
+            "to resemble CDM point-mass subhalos. Useful for studying the "
+            "axion-CDM transition regime."
+        ),
+        "substructure_note": "Requires substructure_type = axion.",
+        "suggestions": {
+            "model_config_type": ("Model_I", "150x150 px needed to resolve compact vortex cores"),
+            "halo_mass":         ("1e12 M_sun", "Galaxy-scale halo"),
+            "z_halo":            ("0.5", "Standard lens redshift"),
+            "z_source":          ("1.5", "Standard source redshift"),
+            "axion_mass":        ("1e-22 eV", "Upper end of fuzzy DM window; smallest vortex cores"),
+            "vortex_mass":       ("3e10 M_sun", "Default total vortex mass"),
+            "num_images":        ("10", "Generate several to sample compact vortex variety"),
+            "random_seed":       ("None", "Unset for varied realizations"),
+        },
+    },
+    "statistical_study": {
+        "label": "Statistical Ensemble Study",
+        "description": (
+            "Large batch of images for ML training, statistical analysis, or "
+            "sensitivity studies. Designed to generate enough samples for "
+            "meaningful classification or power-spectrum measurements."
+        ),
+        "substructure_note": (
+            "Run separate batches for each substructure type to build a balanced "
+            "training set across no_sub, axion, and cdm classes."
+        ),
+        "suggestions": {
+            "model_config_type": ("Model_I", "Matches the original DeepLense dataset format for compatibility"),
+            "halo_mass":         ("1e12 M_sun", "Fix mass for a controlled comparison"),
+            "z_halo":            ("0.5", "Fix lens redshift for a controlled comparison"),
+            "z_source":          ("1.5", "Fix source redshift for a controlled comparison"),
+            "num_images":        ("50", "Minimum for basic statistical analysis; use 100 for ML training"),
+            "random_seed":       ("0", "Fix seed for the first batch; increment per-batch for variety"),
+        },
+    },
+}
+
+
+async def suggest_parameters(
+    ctx: RunContext[AgentDependencies],
+    scenario: Optional[str] = None,
+    substructure_type: Optional[str] = None,
+    model_config_type: Optional[str] = None,
+) -> str:
+    """Suggest physically motivated simulation parameters for a given scientific scenario.
+
+    Use this tool when the user asks for recommendations, is unsure what values to
+    use, or wants to explore a specific astrophysical configuration. This tool
+    contains physics-based heuristics and does NOT call any external service.
+
+    Args:
+        ctx: Runtime context.
+        scenario: Scientific scenario keyword. One of:
+            "galaxy_scale"      - Typical galaxy-scale strong lens (default DeepLense setup)
+            "cluster_scale"     - Galaxy cluster as lens (high halo mass)
+            "high_redshift"     - High-redshift source behind moderate-redshift lens
+            "low_mass_axion"    - Ultra-light fuzzy DM axion (large vortex cores)
+            "high_mass_axion"   - Heavy axion near the CDM regime (compact cores)
+            "statistical_study" - Large batch for ML training or statistical analysis
+            If omitted, returns the full scenario menu so the user can choose.
+        substructure_type: Already-chosen substructure type, if known ("no_sub",
+            "axion", "cdm"). Used to append substructure-specific advice.
+        model_config_type: Already-chosen model config, if known ("Model_I",
+            "Model_II"). If provided, the model suggestion is omitted from output.
+
+    Returns:
+        Formatted Markdown suggestion report with parameter values and justifications.
+    """
+    # No scenario specified: return the full menu
+    if scenario is None:
+        lines = [
+            "## Available Simulation Scenarios",
+            "",
+            "Choose a scenario to get tailored parameter suggestions:",
+            "",
+        ]
+        for key, info in _SCENARIO_REGISTRY.items():
+            lines.append(f"- **`{key}`** - {info['label']}: {info['description'].split('.')[0]}.")
+        lines.append("")
+        lines.append(
+            "Ask me to suggest parameters for any of the above, "
+            "e.g. \"suggest parameters for cluster_scale\"."
+        )
+        return "\n".join(lines)
+
+    # Normalize key (case-insensitive, spaces or hyphens to underscores)
+    scenario_key = scenario.strip().lower().replace(" ", "_").replace("-", "_")
+    if scenario_key not in _SCENARIO_REGISTRY:
+        close_matches = [k for k in _SCENARIO_REGISTRY if scenario_key in k or k in scenario_key]
+        lines = [f"## Unknown Scenario: `{scenario}`", "", "Available scenarios:"]
+        for key, info in _SCENARIO_REGISTRY.items():
+            lines.append(f"- `{key}` - {info['label']}")
+        if close_matches:
+            lines.append(f"\nDid you mean: `{close_matches[0]}`?")
+        return "\n".join(lines)
+
+    info = _SCENARIO_REGISTRY[scenario_key]
+    suggestions = dict(info["suggestions"])  # shallow copy
+
+    # Drop model suggestion if user already chose one
+    if model_config_type and "model_config_type" in suggestions:
+        del suggestions["model_config_type"]
+
+    # Build report
+    lines = [
+        f"## Suggested Parameters: {info['label']}",
+        "",
+        f"**Scenario:** {info['description']}",
+        "",
+    ]
+
+    if substructure_type:
+        lines.append(f"**Substructure note ({substructure_type}):** {info['substructure_note']}")
+    else:
+        lines.append(f"**Substructure note:** {info['substructure_note']}")
+    lines.append("")
+
+    # Parameter table
+    lines.append("| Parameter | Suggested Value | Justification |")
+    lines.append("|-----------|----------------|---------------|")
+    for param, (value, justification) in suggestions.items():
+        lines.append(f"| `{param}` | {value} | {justification} |")
+    lines.append("")
+
+    # Ready-to-use copy-paste line
+    ready_parts = [f"{param}={value}" for param, (value, _) in suggestions.items()]
+    lines.append("**Ready to use:**")
+    lines.append("`" + ", ".join(ready_parts) + "`")
 
     return "\n".join(lines)
