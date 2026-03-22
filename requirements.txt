@@ -16,3 +16,8 @@ pytest-asyncio>=0.21
 # Web UI
 streamlit>=1.30.0
 python-dotenv>=1.0
+
+# Deployment
+git+https://github.com/dangilman/pyHalo.git
+git+https://github.com/mwt5345/DeepLenseSim.git
+
