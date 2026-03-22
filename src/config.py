@@ -4,6 +4,12 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
+# pydantic-ai's GoogleProvider requires GOOGLE_API_KEY internally.
+# Allow users to set either name -- whichever is present wins.
+if "GOOGLE_API_KEY" not in os.environ and os.environ.get("GEMINI_API_KEY"):
+    os.environ["GOOGLE_API_KEY"] = os.environ["GEMINI_API_KEY"]
+
+
 
 # Default physical constants / parameter ranges
 
