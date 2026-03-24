@@ -1,3 +1,17 @@
+### Common Test I : Multi-Class Classification
+
+**Task:** Classify 150×150 grayscale gravitational lens images into three dark matter substructure categories (`no_sub`, `subhalo`, `vortex`).
+
+| | |
+|---|---|
+| Model | EfficientNet-B3 (12M params) |
+| Strategy | Single-phase fine-tuning with cosine annealing (67 epochs), TTA×8 |
+| **Test AUC** | **0.9963** (macro One-vs-Rest, TTA×8) |
+
+📄 **[Detailed README →](Common%20Test/README.md)** · 📓 **[Notebook →](Common%20Test/notebooks/Common_Task%28EfficientNet-B3%29.ipynb)**
+
+---
+
 # Agentic Workflow for DeepLenseSim
 
 A **schema-first agentic system** built on [Pydantic AI](https://ai.pydantic.dev/) that wraps the [DeepLenseSim](https://github.com/mwt5345/DeepLenseSim) pipeline. The agent translates underspecified natural-language requests into verified, physics-consistent gravitational lensing simulations through iterative clarification, schema validation, and explicit human confirmation.
