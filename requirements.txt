@@ -19,5 +19,5 @@ python-dotenv>=1.0
 
 # Deployment
 git+https://github.com/dangilman/pyHalo.git
-git+https://github.com/mwt5345/DeepLenseSim.git
+./DeepLenseSim
 
