@@ -20,4 +20,5 @@ python-dotenv>=1.0
 # Deployment
 git+https://github.com/dangilman/pyHalo.git
 ./DeepLenseSim
+mcfit
 
