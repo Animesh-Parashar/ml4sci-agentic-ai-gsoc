@@ -30,7 +30,10 @@ kwargs_r_band = Euclid_r.kwargs_single_band()
 Euclid_i = Euclid(band='VIS', psf_type='GAUSSIAN', coadd_years=6)
 kwargs_i_band = Euclid_i.kwargs_single_band()
 
-from pyHalo.preset_models import ULDM
+try:
+    from pyHalo.preset_models import ULDM
+except ImportError:
+    from pyHalo.PresetModels.uldm import ULDM
 from pyHalo.Halos.lens_cosmo import LensCosmo
 from pyHalo.single_realization import SingleHalo
 

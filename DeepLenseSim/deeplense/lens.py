@@ -4,7 +4,10 @@ from astropy.cosmology import FlatLambdaCDM
 from astropy import units as u
 from astropy.constants import G, c, M_sun
 
-from pyHalo.preset_models import CDM
+try:
+    from pyHalo.preset_models import CDM
+except ImportError:
+    from pyHalo.PresetModels.cdm import CDM
 
 
 from lenstronomy.LightModel.light_model import LightModel
