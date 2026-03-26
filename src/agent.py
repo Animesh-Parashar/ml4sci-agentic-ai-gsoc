@@ -93,7 +93,7 @@ def _detect_model() -> str:
     Priority: GEMINI_API_KEY → OPENAI_API_KEY → Ollama (local, no key needed)
     """
     if os.environ.get("GEMINI_API_KEY"):
-        return "google-gla:gemini-2.0-flash"
+        return "google-gla:gemini-flash-latest"
     if os.environ.get("OPENAI_API_KEY"):
         return "openai:gpt-4o-mini"
     # Fallback to Ollama (local, no API key required)
@@ -110,7 +110,7 @@ def create_lensing_agent(
     Args:
         model_name: LLM model identifier. If None, auto-detects from
             available API keys. Supported formats:
-            - "google-gla:gemini-2.0-flash" 
+            - "google-gla:gemini-flash-latest" 
             - "openai:gpt-4o-mini"
             - "ollama:llama3.2"              
         deps: Optional custom AgentDependencies. Defaults to standard config.

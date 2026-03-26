@@ -296,7 +296,7 @@ cp .env.example .env   # then fill in your API key
 **LLM provider auto-detection (priority order):**
 
 ```
-GEMINI_API_KEY set  →  google-gla:gemini-2.0-flash   (recommended, free tier)
+GEMINI_API_KEY set  →  google-gla:gemini-flash-latest   (recommended, free tier)
 OPENAI_API_KEY set  →  openai:gpt-4o-mini
 neither set         →  ollama:llama3.2  (fully local, no key required)
 LENSING_AGENT_MODEL →  overrides all of the above

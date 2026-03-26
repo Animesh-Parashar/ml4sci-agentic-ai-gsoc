@@ -47,9 +47,9 @@ MAX_IMAGES_PER_REQUEST = 100
 # Supported LLM models shown in the frontend dropdown.
 # Each entry: (model_id_string, display_label)
 SUPPORTED_MODELS: list[tuple[str, str]] = [
+    ("google-gla:gemini-flash-latest",    "Gemini Flash (latest)"),
     ("google-gla:gemini-2.0-flash",       "Gemini 2.0 Flash"),
     ("google-gla:gemini-2.0-flash-lite",  "Gemini 2.0 Flash Lite"),
-    ("google-gla:gemini-flash-latest",    "Gemini Flash (latest)"),
     ("openai:gpt-4o-mini",               "OpenAI GPT-4o Mini"),
     ("openai:gpt-4o",                    "OpenAI GPT-4o"),
     ("ollama:custom",                    "Ollama (local)"),
